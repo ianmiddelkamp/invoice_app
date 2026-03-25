@@ -21,7 +21,7 @@ class InvoiceGenerator
       InvoiceLineItem.create!(
         invoice: invoice,
         time_entry: entry,
-        description: entry.description,
+        description: build_description(entry),
         hours: entry.hours,
         rate: rate,
         amount: entry.hours * rate
@@ -39,11 +39,16 @@ class InvoiceGenerator
                      .left_outer_joins(:invoice_line_item)
                      .where(projects: { client_id: @client.id })
                      .where(invoice_line_items: { id: nil })
-                     .includes(project: :rates)
+                     .includes(:task, project: :rates)
 
     scope = scope.where("date >= ?", @start_date) if @start_date.present?
     scope = scope.where("date <= ?", @end_date) if @end_date.present?
     scope
+  end
+
+  def build_description(entry)
+    parts = [entry.description.presence, entry.task&.title.presence].compact
+    parts.join(" · ")
   end
 
   def effective_rate(entry)
