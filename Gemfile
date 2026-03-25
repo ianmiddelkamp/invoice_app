@@ -41,7 +41,7 @@ gem "sidekiq"
 gem "bcrypt", "~> 3.1.1"
 
 group :development do
-  gem "letter_opener_web"   
+  gem "letter_opener_web"
 end
 
 group :development, :test do

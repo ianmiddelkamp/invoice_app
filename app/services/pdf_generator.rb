@@ -7,7 +7,7 @@ class PdfGenerator
     "NET 30"          => "Payment due within 30 days of invoice date.",
     "NET 45"          => "Payment due within 45 days of invoice date.",
     "NET 60"          => "Payment due within 60 days of invoice date.",
-    "Due on Receipt"  => "Payment due upon receipt of this invoice.",
+    "Due on Receipt"  => "Payment due upon receipt of this invoice."
   }.freeze
 
   INDIGO     = "4338ca"
