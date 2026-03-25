@@ -3,10 +3,9 @@ services:
   db:
     image: postgres:15
     environment:
-  
-      POSTGRES_USER: rails_user
-      POSTGRES_PASSWORD: rails_pass
-      POSTGRES_DB: invoice_dev    
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASS}
+      POSTGRES_DB: invoice_dev
     ports:
       - "5432:5432"
     volumes:
@@ -32,18 +31,22 @@ services:
       - db
       - redis
     environment:
-      DATABASE_URL: postgres://rails_user:rails_pass@db:5432/invoice_dev
       SECRET_KEY_BASE: ${SECRET_KEY_BASE}
       RAILS_ENV: development
       RACK_ENV: development
       REDIS_URL: redis://redis:6379/0
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: invoice_dev
+      DB_USER: ${DB_USER}
+      DB_PASS: ${DB_PASS}
 
   sidekiq:
     build:
       context: .
       args:
         BUNDLE_WITHOUT: ""
-    command:  bundle exec sidekiq -C config/sidekiq.yml
+    command: bundle exec sidekiq -C config/sidekiq.yml
     volumes:
       - .:/app
     working_dir: /app
@@ -51,11 +54,15 @@ services:
       - db
       - redis
     environment:
-      DATABASE_URL: postgres://rails_user:rails_pass@db:5432/invoice_dev
       SECRET_KEY_BASE: ${SECRET_KEY_BASE}
       RAILS_ENV: development
       RACK_ENV: development
       REDIS_URL: redis://redis:6379/0
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: invoice_dev
+      DB_USER: ${DB_USER}
+      DB_PASS: ${DB_PASS}
 
 volumes:
   db_data:

@@ -11,47 +11,101 @@ A Rails 8 API-only backend for a freelance invoicing application. Handles client
 - **Active Storage** — PDF file storage
 - **Action Mailer** + **letter_opener_web** (dev) — email delivery
 
+## Environments
+
+Two isolated environments are supported, each with its own PostgreSQL instance, credentials, and data volume.
+
+| | Development | Production (local) |
+|---|---|---|
+| Database | `invoice_dev` | `invoice_prod` |
+| PostgreSQL port | 5432 | 5433 |
+| Rails env | `development` | `production` |
+| Email | letter_opener_web | SMTP (configure separately) |
+| Compose file | `docker-compose.yml` | `docker-compose.yml` + `docker-compose.prod.yml` |
+| Env file | `.env` | `.env.prod` |
+
 ## Getting Started
 
 ### Prerequisites
 
 - Docker and Docker Compose
-- A `.env` file (or shell export) with `SECRET_KEY_BASE`
-
-### Run with Docker Compose
+- `.env` and `.env.prod` files based on `.env.example`
 
 ```bash
-docker-compose build
-docker-compose up
+cp .env.example .env
+cp .env.example .env.prod
 ```
 
-This starts four services:
-
-| Service | Description | Port |
-|---------|-------------|------|
-| `db` | PostgreSQL 15 | 5432 |
-| `redis` | Redis 7 | 6379 |
-| `web` | Rails API server | 3000 |
-| `sidekiq` | Background job worker | — |
-
-### Database Setup
-
-On first run the entrypoint runs `db:prepare` automatically. To run migrations manually:
-
-```bash
-docker-compose exec web bundle exec rails db:migrate
-```
+Fill in strong unique values for each. Never reuse credentials between environments.
 
 ### Environment Variables
 
 | Variable | Description |
 |----------|-------------|
-| `DATABASE_URL` | PostgreSQL connection string |
-| `REDIS_URL` | Redis connection string |
 | `SECRET_KEY_BASE` | Rails secret key |
-| `RAILS_ENV` / `RACK_ENV` | `development` or `production` |
+| `DB_USER` | PostgreSQL username |
+| `DB_PASS` | PostgreSQL password |
+
+### Build
+
+```bash
+docker-compose build
+```
+
+### Run Development
+
+```bash
+docker-compose up
+```
+
+### Run Production (local)
+
+```bash
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.prod up
+```
+
+Recommended: add a shell alias to `~/.bashrc` or `~/.zshrc`:
+
+```bash
+alias invoice-prod="docker-compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.prod"
+```
+
+Then use `invoice-prod up`, `invoice-prod exec web ...`, etc.
+
+### Database Setup (first run)
+
+**Development:**
+```bash
+docker-compose exec web bundle exec rails db:migrate db:seed
+```
+
+**Production:**
+```bash
+invoice-prod run --rm web bundle exec rails db:create db:migrate db:seed
+```
+
+### Update User Credentials
+
+After seeding, update the default user via the Rails console:
+
+**Development:**
+```bash
+docker-compose exec web bundle exec rails console
+User.first.update(email: "you@example.com", name: "Your Name", password: "yourpassword")
+```
+
+**Production:**
+```bash
+invoice-prod exec web bundle exec rails console
+User.first.update(email: "you@example.com", name: "Your Name", password: "yourpassword")
+```
 
 ## API Endpoints
+
+### Auth
+```
+POST   /auth/login
+```
 
 ### Business Profile
 ```
@@ -102,6 +156,10 @@ POST   /invoices/:id/send_invoice
 ```
 
 ## Key Concepts
+
+### Authentication
+
+All endpoints except `POST /auth/login` require a `Authorization: Bearer <token>` header. Tokens are JWT, valid for 24 hours.
 
 ### Invoice Generation
 

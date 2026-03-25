@@ -32,3 +32,5 @@
 /config/*.key
 
 invoice_app.code-workspace
+.env
+.env.prod
