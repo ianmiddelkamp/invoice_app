@@ -1,6 +1,7 @@
 class TimerSession < ApplicationRecord
   belongs_to :project
   belongs_to :user
+  belongs_to :task, optional: true
 
   scope :active, -> { where(stopped_at: nil) }
 

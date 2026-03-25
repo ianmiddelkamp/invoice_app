@@ -14,10 +14,15 @@ class TimerSessionsController < ApplicationController
 
     session = TimerSession.create!(
       project_id: params[:project_id],
+      task_id: params[:task_id].presence,
       user: @current_user,
       started_at: Time.current,
       description: params[:description]
     )
+
+    # Mark task as in_progress when timer starts
+    Task.where(id: params[:task_id]).update_all(status: 'in_progress') if params[:task_id].present?
+
     render json: session_json(session), status: :created
   end
 
@@ -37,6 +42,7 @@ class TimerSessionsController < ApplicationController
 
     time_entry = TimeEntry.create!(
       project_id: session.project_id,
+      task_id: session.task_id,
       user: @current_user,
       date: session.started_at.to_date,
       hours: session.hours,
@@ -66,6 +72,6 @@ class TimerSessionsController < ApplicationController
   private
 
   def session_json(session)
-    session.as_json(include: { project: { include: :client } })
+    session.as_json(include: { project: { include: :client }, task: { only: %i[id title status] } })
   end
 end

@@ -4,10 +4,13 @@ class TimeEntriesController < ApplicationController
 
   def index
     @time_entries = @project.time_entries
-                             .includes(invoice_line_item: :invoice)
+                             .includes(:task, invoice_line_item: :invoice)
                              .order(date: :desc)
     render json: @time_entries.as_json(
-      include: { invoice_line_item: { include: { invoice: { methods: :number } } } }
+      include: {
+        task: { only: %i[id title] },
+        invoice_line_item: { include: { invoice: { methods: :number } } }
+      }
     )
   end
 
