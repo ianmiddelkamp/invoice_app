@@ -18,7 +18,10 @@ services:
       - "6379:6379"
 
   web:
-    build: .
+    build:
+      context: .
+      args:
+        BUNDLE_WITHOUT: ""
     command: bash -c "rm -f tmp/pids/server.pid && bundle exec rails s -b 0.0.0.0"
     volumes:
       - .:/app
@@ -33,9 +36,13 @@ services:
       SECRET_KEY_BASE: ${SECRET_KEY_BASE}
       RAILS_ENV: development
       RACK_ENV: development
+      REDIS_URL: redis://redis:6379/0
 
   sidekiq:
-    build: .
+    build:
+      context: .
+      args:
+        BUNDLE_WITHOUT: ""
     command:  bundle exec sidekiq -C config/sidekiq.yml
     volumes:
       - .:/app
@@ -45,6 +52,10 @@ services:
       - redis
     environment:
       DATABASE_URL: postgres://rails_user:rails_pass@db:5432/invoice_dev
+      SECRET_KEY_BASE: ${SECRET_KEY_BASE}
+      RAILS_ENV: development
+      RACK_ENV: development
+      REDIS_URL: redis://redis:6379/0
 
 volumes:
   db_data:

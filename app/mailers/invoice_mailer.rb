@@ -7,7 +7,7 @@ class InvoiceMailer < ApplicationMailer
 
     attachments["#{@invoice.number}.pdf"] = {
       mime_type: "application/pdf",
-      content: invoice.pdf.download
+      content: @invoice.pdf.download
     }
 
     mail(

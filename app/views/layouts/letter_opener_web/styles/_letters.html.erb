@@ -1,0 +1,8 @@
+<style>
+  <%= render file: LetterOpenerWeb::Engine.root.join("app/views/layouts/letter_opener_web/styles/_letters.html.erb") %>
+  @media (prefers-color-scheme: dark) {
+    body {
+      background-color: initial !important; /* Override the gem's background color */
+    }
+  }
+</style>
