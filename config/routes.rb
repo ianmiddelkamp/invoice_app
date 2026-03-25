@@ -3,6 +3,8 @@ Rails.application.routes.draw do
 
   mount LetterOpenerWeb::Engine, at: "/letter_opener" if defined?(LetterOpenerWeb)
 
+  post "/auth/login", to: "auth#login"
+
   resource :business_profile, only: [:show, :update]
 
   resources :invoices, except: [:new, :edit] do

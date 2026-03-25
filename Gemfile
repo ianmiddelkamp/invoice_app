@@ -39,6 +39,7 @@ gem "prawn"
 gem "prawn-table"
 gem "sidekiq"
 gem "bcrypt", "~> 3.1.1"
+gem "jwt"
 
 group :development do
   gem "letter_opener_web"
