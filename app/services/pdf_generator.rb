@@ -2,23 +2,18 @@ require "prawn"
 require "prawn/table"
 
 class PdfGenerator
-  INDIGO       = "4338ca"
-  LIGHT_GRAY   = "f3f4f6"
-  MID_GRAY     = "6b7280"
-  DARK         = "111827"
-
-  # TODO: move to a settings model or env config
-  BUSINESS_NAME    = ENV.fetch("BUSINESS_NAME", "Your Business Name")
-  BUSINESS_ADDRESS = ENV.fetch("BUSINESS_ADDRESS", "Your Address")
-  BUSINESS_EMAIL   = ENV.fetch("BUSINESS_EMAIL", "you@example.com")
-  BUSINESS_PHONE   = ENV.fetch("BUSINESS_PHONE", "")
+  INDIGO     = "4338ca"
+  LIGHT_GRAY = "f3f4f6"
+  MID_GRAY   = "6b7280"
+  DARK       = "111827"
 
   def initialize(invoice)
-    @invoice = invoice
-    @client  = invoice.client
-    @items   = invoice.invoice_line_items
-                      .includes(time_entry: :project)
-                      .order("time_entries.date ASC")
+    @invoice  = invoice
+    @client   = invoice.client
+    @business = BusinessProfile.instance
+    @items    = invoice.invoice_line_items
+                       .includes(time_entry: :project)
+                       .order("time_entries.date ASC")
   end
 
   def generate
@@ -84,11 +79,13 @@ class PdfGenerator
       pdf.bounding_box([0, pdf.cursor], width: col_width) do
         pdf.font_size(8) { pdf.text "FROM", style: :bold, color: MID_GRAY }
         pdf.move_down 4
-        pdf.font_size(11) { pdf.text BUSINESS_NAME, style: :bold, color: DARK }
+        pdf.font_size(11) { pdf.text @business.name.presence || "Your Business Name", style: :bold, color: DARK }
         pdf.font_size(9) do
-          pdf.text BUSINESS_ADDRESS, color: MID_GRAY if BUSINESS_ADDRESS.present?
-          pdf.text BUSINESS_EMAIL, color: MID_GRAY if BUSINESS_EMAIL.present?
-          pdf.text BUSINESS_PHONE, color: MID_GRAY if BUSINESS_PHONE.present?
+          address_parts = [@business.address1, @business.city, @business.state, @business.postcode].compact_blank
+          pdf.text address_parts.join(", "), color: MID_GRAY if address_parts.any?
+          pdf.text @business.email,      color: MID_GRAY if @business.email.present?
+          pdf.text @business.phone,      color: MID_GRAY if @business.phone.present?
+          pdf.text "HST # #{@business.hst_number}", color: MID_GRAY if @business.hst_number.present?
         end
       end
     end
@@ -110,9 +107,9 @@ class PdfGenerator
 
   def draw_line_items(pdf)
     headers = [
-      { content: "Date",        width: 70  },
-      { content: "Project",     width: 110 },
-      { content: "Description", width: 165 },
+      { content: "Date",        width: 65  },
+      { content: "Project",     width: 105 },
+      { content: "Description", width: 160 },
       { content: "Hours",       width: 45  },
       { content: "Rate",        width: 55  },
       { content: "Amount",      width: 65  }

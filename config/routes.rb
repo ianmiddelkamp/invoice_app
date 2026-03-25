@@ -1,6 +1,8 @@
 Rails.application.routes.draw do
   get "up" => "rails/health#show", as: :rails_health_check
 
+  resource :business_profile, only: [:show, :update]
+
   resources :invoices, except: [:new, :edit] do
     get :pdf, on: :member
   end
