@@ -1,29 +1,54 @@
 class InvoiceGenerator
-  def initialize(client:)
+  def initialize(client:, start_date: nil, end_date: nil)
     @client = client
+    @start_date = start_date
+    @end_date = end_date
   end
 
   def generate!
-    # Grab unbilled time entries for this client
-    time_entries = TimeEntry.joins(:project)
-                        .left_outer_joins(:invoice_line_item)
-                        .where(projects: { client_id: @client.id })
-                        .where(invoice_line_items: { id: nil })
-
+    time_entries = unbilled_entries
     return nil if time_entries.empty?
 
-    invoice = Invoice.create!(client: @client, status: "pending")
+    invoice = Invoice.create!(
+      client: @client,
+      status: "pending",
+      start_date: @start_date,
+      end_date: @end_date
+    )
 
     time_entries.each do |entry|
+      rate = effective_rate(entry)
       InvoiceLineItem.create!(
         invoice: invoice,
         time_entry: entry,
+        description: entry.description,
         hours: entry.hours,
-        rate: entry.project.rates.first&.rate || 0,
-        amount: entry.hours * (entry.project.rates.first&.rate || 0)
+        rate: rate,
+        amount: entry.hours * rate
       )
     end
 
+    invoice.update!(total: invoice.invoice_line_items.sum(:amount))
     invoice
+  end
+
+  private
+
+  def unbilled_entries
+    scope = TimeEntry.joins(:project)
+                     .left_outer_joins(:invoice_line_item)
+                     .where(projects: { client_id: @client.id })
+                     .where(invoice_line_items: { id: nil })
+                     .includes(project: :rates)
+
+    scope = scope.where("date >= ?", @start_date) if @start_date.present?
+    scope = scope.where("date <= ?", @end_date) if @end_date.present?
+    scope
+  end
+
+  def effective_rate(entry)
+    entry.project.rates.first&.rate ||
+      entry.project.client.rates.first&.rate ||
+      0
   end
 end
