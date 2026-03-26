@@ -30,5 +30,9 @@ module InvoiceApp
     config.api_only = true
 
     config.active_job.queue_adapter = :sidekiq
+    config.sow_provider     = ENV.fetch("SOW_PROVIDER", "groq")
+    config.sow_api_key      = ENV.fetch("SOW_API_KEY", nil)
+    config.sow_ollama_host  = ENV.fetch("SOW_OLLAMA_HOST", "http://host.docker.internal:11434")
+    config.sow_ollama_model = ENV.fetch("SOW_OLLAMA_MODEL", "llama3.1:8b")
   end
 end

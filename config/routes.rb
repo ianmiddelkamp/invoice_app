@@ -25,6 +25,9 @@ Rails.application.routes.draw do
     resource :rate, only: [:show, :update]
   end
   resources :projects do
+    member do
+      post :sow_import, to: "sow_imports#create"
+    end
     resource :rate, only: [:show, :update]
     resources :time_entries, only: [:index, :create, :update, :destroy]
     resources :attachments, only: [:index, :create, :show, :destroy],

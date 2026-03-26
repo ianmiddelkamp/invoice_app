@@ -38,3 +38,4 @@ services:
 volumes:
   db_prod_data:
   storage_prod:
+  ollama_data:

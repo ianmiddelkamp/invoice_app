@@ -16,6 +16,13 @@ services:
     ports:
       - "6379:6379"
 
+  ollama:
+    image: ollama/ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+
   web:
     build:
       context: .
@@ -30,6 +37,7 @@ services:
     depends_on:
       - db
       - redis
+      - ollama
     environment:
       SECRET_KEY_BASE: ${SECRET_KEY_BASE}
       RAILS_ENV: development
@@ -40,6 +48,10 @@ services:
       DB_NAME: invoice_dev
       DB_USER: ${DB_USER}
       DB_PASS: ${DB_PASS}
+      SOW_PROVIDER: ${SOW_PROVIDER:-ollama}
+      SOW_API_KEY: ${SOW_API_KEY:-}
+      SOW_OLLAMA_HOST: ${SOW_OLLAMA_HOST:-http://ollama:11434}
+      SOW_OLLAMA_MODEL: ${SOW_OLLAMA_MODEL:-phi3:mini}
 
   sidekiq:
     build:
@@ -53,6 +65,7 @@ services:
     depends_on:
       - db
       - redis
+      - ollama
     environment:
       SECRET_KEY_BASE: ${SECRET_KEY_BASE}
       RAILS_ENV: development
@@ -63,6 +76,11 @@ services:
       DB_NAME: invoice_dev
       DB_USER: ${DB_USER}
       DB_PASS: ${DB_PASS}
+      SOW_PROVIDER: ${SOW_PROVIDER:-ollama}
+      SOW_API_KEY: ${SOW_API_KEY:-}
+      SOW_OLLAMA_HOST: ${SOW_OLLAMA_HOST:-http://ollama:11434}
+      SOW_OLLAMA_MODEL: ${SOW_OLLAMA_MODEL:-phi3:mini}
 
 volumes:
   db_data:
+  ollama_data:

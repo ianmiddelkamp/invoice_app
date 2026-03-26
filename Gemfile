@@ -37,6 +37,7 @@ gem "sidekiq"
 gem "redis", ">= 4.0.1"
 gem "bcrypt", "~> 3.1.1"
 gem "jwt"
+gem "docx"
 
 group :development do
   gem "letter_opener_web"
