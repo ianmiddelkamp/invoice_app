@@ -27,6 +27,8 @@ Rails.application.routes.draw do
   resources :projects do
     resource :rate, only: [:show, :update]
     resources :time_entries, only: [:index, :create, :update, :destroy]
+    resources :attachments, only: [:index, :create, :show, :destroy],
+                            controller: :project_attachments
     resources :task_groups, only: [:index, :create, :update, :destroy] do
       collection do
         patch :reorder
