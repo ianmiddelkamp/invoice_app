@@ -1,10 +1,11 @@
 class EstimateMailer < ApplicationMailer
-  def estimate_email(estimate)
+  def estimate_email(estimate, changes = nil)
     @estimate = estimate
     @client   = estimate.project.client
     @project  = estimate.project
     @business = BusinessProfile.instance
     @items    = estimate.estimate_line_items.includes(task: :task_group).order("estimate_line_items.id ASC")
+    @changes  = changes
 
     attachments["#{@estimate.number}.pdf"] = {
       mime_type: "application/pdf",

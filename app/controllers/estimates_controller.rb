@@ -10,7 +10,7 @@ class EstimatesController < ApplicationController
   end
 
   def show
-    render json: estimate_json(@estimate)
+    render json: estimate_json(@estimate).merge(changes: diff_since_last_sent(@estimate))
   end
 
   def create
@@ -58,7 +58,16 @@ class EstimatesController < ApplicationController
       return
     end
 
-    EstimateMailer.estimate_email(@estimate).deliver_later
+    changes = diff_since_last_sent(@estimate)
+    EstimateMailer.estimate_email(@estimate, changes).deliver_later
+
+    @estimate.update!(
+      last_sent_snapshot: @estimate.estimate_line_items.map { |i|
+        { "task_id" => i.task_id, "description" => i.description, "hours" => i.hours.to_f, "amount" => i.amount.to_f }
+      },
+      last_sent_total: @estimate.total
+    )
+
     render json: { message: "Estimate sent to #{@estimate.project.client.email1}." }
   end
 
@@ -90,12 +99,55 @@ class EstimatesController < ApplicationController
     @estimate = Estimate.find(params[:id])
   end
 
+  def diff_since_last_sent(estimate)
+    snapshot = estimate.last_sent_snapshot
+    previous_total = estimate.last_sent_total
+
+    if snapshot.nil?
+      prev = Estimate
+        .where(project_id: estimate.project_id)
+        .where.not(id: estimate.id)
+        .where.not(last_sent_snapshot: nil)
+        .order(updated_at: :desc)
+        .first
+      snapshot       = prev&.last_sent_snapshot
+      previous_total = prev&.last_sent_total
+    end
+
+    return nil unless snapshot.present?
+
+    prev_by_task = snapshot.index_by { |i| i["task_id"] }
+    curr_items   = estimate.estimate_line_items.map { |i|
+      { "task_id" => i.task_id, "description" => i.description, "hours" => i.hours.to_f, "amount" => i.amount.to_f }
+    }
+    curr_by_task = curr_items.index_by { |i| i["task_id"] }
+
+    added   = curr_items.reject { |i| prev_by_task[i["task_id"]] }
+    removed = snapshot.reject { |i| curr_by_task[i["task_id"]] }
+    changed = curr_items.filter_map do |i|
+      prev = prev_by_task[i["task_id"]]
+      next unless prev && prev["hours"] != i["hours"]
+      { "description" => i["description"], "old_hours" => prev["hours"], "new_hours" => i["hours"] }
+    end
+
+    return nil if added.empty? && removed.empty? && changed.empty?
+
+    {
+      added: added,
+      removed: removed,
+      changed: changed,
+      previous_total: previous_total,
+      current_total: estimate.total
+    }
+  end
+
   def estimate_params
     params.require(:estimate).permit(:status)
   end
 
   def estimate_json(estimate)
     estimate.as_json(
+      except: %i[last_sent_snapshot last_sent_total],
       methods: :number,
       include: {
         project: {

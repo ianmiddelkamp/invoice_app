@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_03_26_000003) do
+ActiveRecord::Schema[8.1].define(version: 2026_03_26_000004) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -94,6 +94,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_26_000003) do
 
   create_table "estimates", force: :cascade do |t|
     t.datetime "created_at", null: false
+    t.jsonb "last_sent_snapshot"
+    t.decimal "last_sent_total", precision: 10, scale: 2
     t.bigint "project_id", null: false
     t.string "status", default: "draft", null: false
     t.decimal "total", precision: 10, scale: 2

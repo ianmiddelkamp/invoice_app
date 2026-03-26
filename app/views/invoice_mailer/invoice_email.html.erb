@@ -5,13 +5,14 @@
     <style>
       body        { font-family: Helvetica, Arial, sans-serif; color: #111827; font-size: 14px; margin: 0; padding: 0; background: #f3f4f6; }
       .wrapper    { max-width: 600px; margin: 32px auto; background: #ffffff; border-radius: 8px; overflow: hidden; }
-      .header     { background: #4338ca; padding: 28px 32px; }
-      .header h1  { color: #ffffff; margin: 0; font-size: 22px; }
-      .header p   { color: #c7d2fe; margin: 4px 0 0; font-size: 13px; }
+      .header     { background: #ffffff; padding: 28px 32px; display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid <%= @business.primary_color.presence || '#4338ca' %>; }
+      .header-left img { max-height: 56px; max-width: 160px; object-fit: contain; display: block; }
+      .header h1  { color: #111827; margin: 0; font-size: 22px; text-align: right; }
+      .header p   { color: #6b7280; margin: 4px 0 0; font-size: 13px; text-align: right; }
       .body       { padding: 28px 32px; }
       .body p     { margin: 0 0 16px; line-height: 1.6; color: #374151; }
       table       { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 13px; }
-      th          { background: #4338ca; color: #ffffff; text-align: left; padding: 8px 10px; }
+      th          { background: <%= @business.primary_color.presence || '#4338ca' %>; color: #ffffff; text-align: left; padding: 8px 10px; }
       th.right,
       td.right    { text-align: right; }
       td          { padding: 8px 10px; border-bottom: 1px solid #e5e7eb; color: #374151; }
@@ -23,8 +24,17 @@
   <body>
     <div class="wrapper">
       <div class="header">
-        <h1><%= @invoice.number %></h1>
-        <p><%= @business.name.presence || "Invoice" %></p>
+        <div class="header-left">
+          <% if @business.logo_data_uri.present? %>
+            <img src="<%= @business.logo_data_uri %>" alt="<%= @business.name %>">
+          <% else %>
+            <span style="font-size:13px; font-weight:600; color:#111827;"><%= @business.name %></span>
+          <% end %>
+        </div>
+        <div>
+          <h1><%= @invoice.number %></h1>
+          <p><%= @business.name.presence || "Invoice" %></p>
+        </div>
       </div>
 
       <div class="body">
@@ -60,8 +70,8 @@
           </tbody>
         </table>
 
-        <p>Payment terms: <strong><%= @client.sales_terms.presence || "NET 15" %></strong></p>
-        <p>Thank you for your business.</p>
+        <p>Payment terms: <strong><%= @client.sales_terms.presence || @business.default_payment_terms.presence || "NET 15" %></strong></p>
+        <p><%= @business.invoice_footer.presence || "Thank you for your business." %></p>
 
         <% if @business.name.present? %>
           <p style="color: #6b7280; font-size: 13px;">

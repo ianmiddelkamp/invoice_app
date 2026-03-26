@@ -1,6 +1,18 @@
 Hi <%= @client.contact_name.presence || @client.name %>,
 
+<% if @changes %>
+Please find an updated estimate (<%= @estimate.number %>) for project "<%= @project.name %>" attached.
+
+Changes since last estimate:
+<% @changes[:added].each do |i| %>  Added:   <%= i["description"] %> (<%= "%.2f" % i["hours"] %>h)
+<% end %><% @changes[:removed].each do |i| %>  Removed: <%= i["description"] %>
+<% end %><% @changes[:changed].each do |i| %>  Revised: <%= i["description"] %> (<%= "%.2f" % i["old_hours"] %>h -> <%= "%.2f" % i["new_hours"] %>h)
+<% end %>  Total:   $<%= "%.2f" % @changes[:previous_total] %> -> $<%= "%.2f" % @changes[:current_total] %>
+
+Full breakdown:
+<% else %>
 Please find your estimate (<%= @estimate.number %>) for project "<%= @project.name %>" attached.
+<% end %>
 
 Summary:
 <% @items.each do |item| %>
