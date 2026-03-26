@@ -4,6 +4,14 @@ class TaskGroup < ApplicationRecord
 
   validates :title, presence: true
 
+  def estimated_hours_total
+    tasks.sum { |t| t.estimated_hours || 0 }
+  end
+
+  def actual_hours_total
+    tasks.sum(&:actual_hours)
+  end
+
   before_create :set_position
 
   private

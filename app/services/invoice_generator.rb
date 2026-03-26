@@ -9,27 +9,29 @@ class InvoiceGenerator
     time_entries = unbilled_entries
     return nil if time_entries.empty?
 
-    invoice = Invoice.create!(
-      client: @client,
-      status: "pending",
-      start_date: @start_date,
-      end_date: @end_date
-    )
-
-    time_entries.each do |entry|
-      rate = effective_rate(entry)
-      InvoiceLineItem.create!(
-        invoice: invoice,
-        time_entry: entry,
-        description: build_description(entry),
-        hours: entry.hours,
-        rate: rate,
-        amount: entry.hours * rate
+    ActiveRecord::Base.transaction do
+      invoice = Invoice.create!(
+        client: @client,
+        status: "pending",
+        start_date: @start_date,
+        end_date: @end_date
       )
-    end
 
-    invoice.update!(total: invoice.invoice_line_items.sum(:amount))
-    invoice
+      time_entries.each do |entry|
+        rate = effective_rate(entry)
+        InvoiceLineItem.create!(
+          invoice: invoice,
+          time_entry: entry,
+          description: build_description(entry),
+          hours: entry.hours,
+          rate: rate,
+          amount: entry.hours * rate
+        )
+      end
+
+      invoice.update!(total: invoice.invoice_line_items.sum(:amount))
+      invoice
+    end
   end
 
   private

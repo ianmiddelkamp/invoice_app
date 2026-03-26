@@ -1,0 +1,16 @@
+Hi <%= @client.contact_name.presence || @client.name %>,
+
+Please find your estimate (<%= @estimate.number %>) for project "<%= @project.name %>" attached.
+
+Summary:
+<% @items.each do |item| %>
+  <%= item.description %> — <%= "%.2f" % item.hours %>h @ $<%= "%.2f" % item.rate %> = $<%= "%.2f" % item.amount %>
+<% end %>
+
+Estimated Total: $<%= "%.2f" % @estimate.total %>
+
+This is an estimate only. The final invoice may vary based on actual hours worked.
+
+<% if @business.name.present? %>
+<%= @business.name %>
+<% end %>

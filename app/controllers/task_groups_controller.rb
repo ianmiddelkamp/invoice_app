@@ -3,16 +3,18 @@ class TaskGroupsController < ApplicationController
   before_action :set_task_group, only: %i[update destroy]
 
   def index
-    groups = @project.task_groups.includes(:tasks)
-    render json: groups.as_json(include: { tasks: { only: %i[id title status position] } },
-                                only: %i[id title position])
+    groups = @project.task_groups.includes(tasks: :time_entries)
+    render json: groups.as_json(include: { tasks: { only: %i[id title status position estimated_hours],
+                                                    methods: %i[actual_hours last_entry_date] } },
+                                only: %i[id title position], methods: %i[estimated_hours_total actual_hours_total])
   end
 
   def create
     group = @project.task_groups.build(task_group_params)
     if group.save
-      render json: group.as_json(include: { tasks: { only: %i[id title status position] } },
-                                 only: %i[id title position]), status: :created
+      render json: group.as_json(include: { tasks: { only: %i[id title status position estimated_hours],
+                                                    methods: %i[actual_hours last_entry_date] } },
+                                 only: %i[id title position], methods: %i[estimated_hours_total actual_hours_total]), status: :created
     else
       render json: { errors: group.errors.full_messages }, status: :unprocessable_entity
     end
@@ -20,8 +22,9 @@ class TaskGroupsController < ApplicationController
 
   def update
     if @task_group.update(task_group_params)
-      render json: @task_group.as_json(include: { tasks: { only: %i[id title status position] } },
-                                       only: %i[id title position])
+      render json: @task_group.as_json(include: { tasks: { only: %i[id title status position estimated_hours],
+                                                          methods: %i[actual_hours last_entry_date] } },
+                                       only: %i[id title position], methods: %i[estimated_hours_total actual_hours_total])
     else
       render json: { errors: @task_group.errors.full_messages }, status: :unprocessable_entity
     end

@@ -1,0 +1,46 @@
+<div class="doc-header">
+  <div>
+    <% if logo_data_uri.present? %>
+      <img src="<%= logo_data_uri %>" class="doc-logo" alt="<%= business.name %>" />
+    <% else %>
+      <div class="doc-type"><%= title %></div>
+    <% end %>
+  </div>
+  <div class="doc-meta">
+    <% if logo_data_uri.present? %>
+      <div class="doc-type" style="font-size: 24px;"><%= title %></div>
+    <% end %>
+    <div class="doc-number"><%= document.number %></div>
+    <div class="doc-date">Date: <%= document.created_at.strftime("%d %b %Y") %></div>
+    <% if subtitle.present? %>
+      <div class="doc-subtitle"><%= subtitle %></div>
+    <% end %>
+  </div>
+</div>
+
+<hr class="rule" />
+
+<div class="parties">
+  <div>
+    <div class="party-label">From</div>
+    <div class="party-name"><%= business.name.presence || "Your Business Name" %></div>
+    <div class="party-detail">
+      <% address = [business.address1, business.city, business.state, business.postcode].compact_blank %>
+      <% if address.any? %><%= address.join(", ") %><br/><% end %>
+      <% if business.email.present? %><%= business.email %><br/><% end %>
+      <% if business.phone.present? %><%= business.phone %><br/><% end %>
+      <% if business.hst_number.present? %>HST # <%= business.hst_number %><% end %>
+    </div>
+  </div>
+  <div>
+    <div class="party-label"><%= to_label %></div>
+    <div class="party-name"><%= client.name %></div>
+    <div class="party-detail">
+      <% if client.contact_name.present? %><%= client.contact_name %><br/><% end %>
+      <% if client.email1.present? %><%= client.email1 %><br/><% end %>
+      <% if client.phone1.present? %><%= client.phone1 %><br/><% end %>
+      <% address = [client.address1, client.city, client.state, client.postcode].compact_blank %>
+      <% if address.any? %><%= address.join(", ") %><% end %>
+    </div>
+  </div>
+</div>

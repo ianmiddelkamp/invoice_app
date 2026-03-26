@@ -1,0 +1,46 @@
+<%= render 'pdfs/document_header',
+      title: 'INVOICE',
+      document: @invoice,
+      client: @client,
+      business: @business,
+      to_label: 'Bill To',
+      logo_data_uri: @logo_data_uri,
+      subtitle: @invoice.start_date ? "Period: #{@invoice.start_date.strftime('%d %b %Y')} – #{@invoice.end_date.strftime('%d %b %Y')}" : nil %>
+
+<table>
+  <thead>
+    <tr>
+      <th>Date</th>
+      <th>Project</th>
+      <th>Description</th>
+      <th class="right">Hours</th>
+      <th class="right">Rate</th>
+      <th class="right">Amount</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% @items.each do |item| %>
+      <tr>
+        <td><%= item.time_entry.date.strftime("%d %b %Y") %></td>
+        <td><%= item.time_entry.project.name %></td>
+        <td><%= item.description.presence || "—" %></td>
+        <td class="right"><%= "%.2f" % item.hours %></td>
+        <td class="right">$<%= "%.2f" % item.rate %></td>
+        <td class="right">$<%= "%.2f" % item.amount %></td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>
+
+<div class="total-section">
+  <div>
+    <div class="total-label">Total</div>
+    <div class="total-amount">$<%= "%.2f" % @invoice.total %></div>
+  </div>
+</div>
+
+<div class="footer">
+  <% terms = @client.sales_terms.presence || @business.default_payment_terms.presence || "NET 15" %>
+  Payment terms: <strong><%= terms %></strong><br/>
+  <%= @business.invoice_footer.presence || "Thank you for your business." %>
+</div>

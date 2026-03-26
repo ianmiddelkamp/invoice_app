@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_03_25_231315) do
+ActiveRecord::Schema[8.1].define(version: 2026_03_26_000003) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -48,11 +48,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_25_231315) do
     t.string "city"
     t.string "country"
     t.datetime "created_at", null: false
+    t.string "default_payment_terms"
     t.string "email"
+    t.text "estimate_footer"
     t.string "hst_number"
+    t.text "invoice_footer"
     t.string "name"
     t.string "phone"
     t.string "postcode"
+    t.string "primary_color", default: "#4338ca"
     t.string "state"
     t.datetime "updated_at", null: false
   end
@@ -73,6 +77,28 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_25_231315) do
     t.string "sales_terms", default: "NET 15"
     t.string "state"
     t.datetime "updated_at", null: false
+  end
+
+  create_table "estimate_line_items", force: :cascade do |t|
+    t.decimal "amount", precision: 10, scale: 2, null: false
+    t.datetime "created_at", null: false
+    t.string "description"
+    t.bigint "estimate_id", null: false
+    t.decimal "hours", precision: 5, scale: 2, null: false
+    t.decimal "rate", precision: 8, scale: 2, null: false
+    t.bigint "task_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["estimate_id"], name: "index_estimate_line_items_on_estimate_id"
+    t.index ["task_id"], name: "index_estimate_line_items_on_task_id"
+  end
+
+  create_table "estimates", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "project_id", null: false
+    t.string "status", default: "draft", null: false
+    t.decimal "total", precision: 10, scale: 2
+    t.datetime "updated_at", null: false
+    t.index ["project_id"], name: "index_estimates_on_project_id"
   end
 
   create_table "invoice_line_items", force: :cascade do |t|
@@ -132,6 +158,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_25_231315) do
 
   create_table "tasks", force: :cascade do |t|
     t.datetime "created_at", null: false
+    t.decimal "estimated_hours", precision: 5, scale: 2
     t.integer "position"
     t.string "status"
     t.bigint "task_group_id", null: false
@@ -182,6 +209,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_25_231315) do
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "estimate_line_items", "estimates"
+  add_foreign_key "estimate_line_items", "tasks"
+  add_foreign_key "estimates", "projects"
   add_foreign_key "invoice_line_items", "invoices"
   add_foreign_key "invoice_line_items", "time_entries"
   add_foreign_key "invoices", "clients"

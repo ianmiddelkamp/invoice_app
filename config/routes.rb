@@ -11,7 +11,18 @@ Rails.application.routes.draw do
   patch  "/timer",       to: "timer_sessions#update"
   delete "/timer",       to: "timer_sessions#cancel"
 
-  resource :business_profile, only: [:show, :update]
+  resource :business_profile, only: [:show, :update] do
+    patch :update_logo
+    delete :destroy_logo
+  end
+
+  resources :estimates, except: [:new, :edit] do
+    member do
+      get  :pdf
+      post :regenerate_pdf
+      post :send_estimate
+    end
+  end
 
   resources :invoices, except: [:new, :edit] do
     member do

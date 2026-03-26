@@ -30,9 +30,7 @@ gem "image_processing", "~> 1.2"
 
 # Use Rack CORS for handling Cross-Origin Resource Sharing (CORS), making cross-origin Ajax possible
 gem "rack-cors"
-gem "matrix"
-gem "prawn"
-gem "prawn-table"
+gem "ferrum"
 gem "sidekiq"
 gem "redis", ">= 4.0.1"
 gem "bcrypt", "~> 3.1.1"

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <% brand = @business&.primary_color.presence || "#4338ca" %>
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+
+      body {
+        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+        color: #111827;
+        font-size: 13px;
+        background: white;
+      }
+
+      .doc-header { display: flex; justify-content: space-between; align-items: flex-start; }
+      .doc-logo { max-height: 80px; max-width: 160px; object-fit: contain; }
+      .doc-type { font-size: 38px; font-weight: 700; color: <%= brand %>; letter-spacing: -1px; line-height: 1; }
+      .doc-meta { text-align: right; }
+      .doc-number { font-size: 15px; font-weight: 600; color: #111827; }
+      .doc-date { font-size: 11px; color: #6b7280; margin-top: 4px; }
+      .doc-subtitle { font-size: 11px; color: #6b7280; margin-top: 2px; }
+
+      .rule { border: none; border-top: 2px solid <%= brand %>; margin: 16px 0; }
+      .rule-light { border: none; border-top: 1px solid #e5e7eb; margin: 16px 0; }
+
+      .parties { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin: 20px 0 28px; }
+      .party-label { font-size: 9px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 5px; }
+      .party-name { font-size: 13px; font-weight: 600; color: #111827; margin-bottom: 2px; }
+      .party-detail { font-size: 11px; color: #6b7280; line-height: 1.6; }
+
+      table { width: 100%; border-collapse: collapse; }
+      thead tr { background: <%= brand %>; }
+      th { padding: 9px 12px; text-align: left; font-size: 10px; font-weight: 600; color: white; text-transform: uppercase; letter-spacing: 0.06em; }
+      th.right, td.right { text-align: right; }
+      td { padding: 9px 12px; border-bottom: 1px solid #e5e7eb; font-size: 12px; color: #374151; }
+      tbody tr:nth-child(even) td { background: #f9fafb; }
+
+      .total-section { display: flex; justify-content: flex-end; padding-top: 16px; }
+      .total-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: #6b7280; }
+      .total-amount { font-size: 24px; font-weight: 700; color: #111827; margin-top: 4px; }
+
+      .footer { margin-top: 40px; padding-top: 12px; border-top: 1px solid #e5e7eb; font-size: 10px; color: #9ca3af; line-height: 1.7; }
+    </style>
+  </head>
+  <body>
+    <%= yield %>
+  </body>
+</html>

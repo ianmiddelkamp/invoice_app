@@ -1,0 +1,41 @@
+<%= render 'pdfs/document_header',
+      title: 'ESTIMATE',
+      document: @estimate,
+      client: @client,
+      business: @business,
+      to_label: 'Prepared For',
+      logo_data_uri: @logo_data_uri,
+      subtitle: "Project: #{@project.name}" %>
+
+<table>
+  <thead>
+    <tr>
+      <th>Task</th>
+      <th class="right">Est. Hours</th>
+      <th class="right">Rate</th>
+      <th class="right">Amount</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% @items.each do |item| %>
+      <tr>
+        <td><%= item.description.presence || "—" %></td>
+        <td class="right"><%= "%.2f" % item.hours %></td>
+        <td class="right">$<%= "%.2f" % item.rate %></td>
+        <td class="right">$<%= "%.2f" % item.amount %></td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>
+
+<div class="total-section">
+  <div>
+    <div class="total-label">Estimated Total</div>
+    <div class="total-amount">$<%= "%.2f" % @estimate.total %></div>
+  </div>
+</div>
+
+<div class="footer">
+  <%= @business.estimate_footer.presence || "This is an estimate only. The final invoice may vary based on actual hours worked." %><br/>
+  Thank you for your business.
+</div>
