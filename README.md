@@ -207,7 +207,13 @@ Projects have task groups, and task groups have tasks. Tasks have a status (`tod
 
 ### SOW Import
 
-`POST /projects/:id/sow_import` accepts a `.md`, `.txt`, or `.docx` file and uses an AI model to extract task groups and tasks, returning them as JSON. The default provider is Ollama running locally inside Docker — no data leaves your machine.
+`POST /projects/:id/sow_import` accepts a `.md`, `.txt`, or `.docx` file (or raw `text` param) and uses an AI model to extract a single task group with a flat list of tasks. Returns a JSON object:
+
+```json
+{ "title": "Group name", "tasks": [{ "title": "Task description" }, …] }
+```
+
+The AI picks a concise group title based on the overall scope of the document. The response is synchronous — no polling required.
 
 To switch providers, set `SOW_PROVIDER` in `.env`:
 - `ollama` — local, private, free (default)
