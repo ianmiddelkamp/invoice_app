@@ -6,7 +6,7 @@ class TasksController < ApplicationController
     task = @task_group.tasks.build(task_params)
     task.status ||= "todo"
     if task.save
-      render json: task.as_json(only: %i[id title status position]), status: :created
+      render json: task.as_json(only: %i[id title status position estimated_hours]), status: :created
     else
       render json: { errors: task.errors.full_messages }, status: :unprocessable_entity
     end
@@ -14,7 +14,7 @@ class TasksController < ApplicationController
 
   def update
     if @task.update(task_params)
-      render json: @task.as_json(only: %i[id title status position])
+      render json: @task.as_json(only: %i[id title status position estimated_hours])
     else
       render json: { errors: @task.errors.full_messages }, status: :unprocessable_entity
     end
@@ -48,6 +48,6 @@ class TasksController < ApplicationController
   end
 
   def task_params
-    params.require(:task).permit(:title, :status, :position, :task_group_id)
+    params.require(:task).permit(:title, :status, :position, :task_group_id, :estimated_hours)
   end
 end

@@ -5,6 +5,7 @@ class Task < ApplicationRecord
 
   validates :title, presence: true
   validates :status, inclusion: { in: STATUSES }
+  validates :estimated_hours, numericality: { greater_than: 0 }, allow_nil: true
 
   before_create :set_position
 

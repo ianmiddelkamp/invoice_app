@@ -65,11 +65,10 @@ echo "   Saved: $DB_FILE ($DB_SIZE)"
 echo ""
 echo "📁 Backing up storage files..."
 STORAGE_VOLUME="invoice_app_storage_${ENV_LABEL}"
-STORAGE_SRC="/var/lib/docker/volumes/${STORAGE_VOLUME}/_data"
 FILES_FILE="$FILES_BACKUP_DIR/storage_$TIMESTAMP.tar.gz"
 
-if [ -d "$STORAGE_SRC" ]; then
-  sudo tar -czf "$FILES_FILE" -C "$STORAGE_SRC" . 2>/dev/null || true
+if docker volume inspect "$STORAGE_VOLUME" &>/dev/null; then
+  docker run --rm -v "${STORAGE_VOLUME}:/data" alpine tar -czf - -C /data . > "$FILES_FILE"
   FILES_SIZE=$(du -sh "$FILES_FILE" | cut -f1)
   echo "   Saved: $FILES_FILE ($FILES_SIZE)"
 else
