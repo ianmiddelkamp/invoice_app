@@ -43,8 +43,11 @@ class InvoiceGenerator
   private
 
   def specific_entries
-    TimeEntry.where(id: @time_entry_ids)
-             .includes(:task, :charge_code, project: :rates)
+    entries = TimeEntry.where(id: @time_entry_ids)
+                       .includes(:task, :charge_code, invoice_line_item: {}, project: :rates)
+    already_billed = entries.select { |e| e.invoice_line_item.present? }
+    raise ArgumentError, "Some entries are already billed" if already_billed.any?
+    entries
   end
 
   def unbilled_entries

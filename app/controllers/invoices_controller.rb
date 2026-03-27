@@ -38,12 +38,17 @@ class InvoicesController < ApplicationController
   def create
     client = Client.find(params[:client_id])
 
-    invoice = InvoiceGenerator.new(
-      client: client,
-      start_date: params[:start_date],
-      end_date: params[:end_date],
-      time_entry_ids: params[:time_entry_ids]
-    ).generate!
+    begin
+      invoice = InvoiceGenerator.new(
+        client: client,
+        start_date: params[:start_date],
+        end_date: params[:end_date],
+        time_entry_ids: params[:time_entry_ids]
+      ).generate!
+    rescue ArgumentError => e
+      render json: { error: e.message }, status: :unprocessable_entity
+      return
+    end
 
     if invoice.nil?
       render json: { error: "No unbilled time entries found for this client in the selected period." },

@@ -7,19 +7,37 @@ class TimeEntriesController < ApplicationController
       @project.time_entries
     else
       scope = TimeEntry.all
-      scope = scope.where(charge_code_id: params[:charge_code_id]) if params[:charge_code_id].present?
-      scope = scope.where(project_id: nil) if params[:charge_code_id].present? || params[:charge_codes_only].present?
+
+      if params[:client_id].present?
+        scope = scope.left_outer_joins(:project).where(
+          "(time_entries.project_id IS NOT NULL AND projects.client_id = :cid) OR " \
+          "(time_entries.charge_code_id IS NOT NULL AND time_entries.client_id = :cid)",
+          cid: params[:client_id]
+        )
+      end
+
+      scope = scope.where(project_id: params[:project_id]) if params[:project_id].present?
+      scope = scope.where(project_id: nil) if params[:hide_charge_codes].blank? && params[:charge_code_id].present?
+      scope = scope.where.not(project_id: nil) if params[:hide_charge_codes] == "true"
+
+      if params[:status] == "unbilled"
+        scope = scope.left_outer_joins(:invoice_line_item).where(invoice_line_items: { id: nil })
+      elsif params[:status] == "billed"
+        scope = scope.joins(:invoice_line_item)
+      end
+
       scope
     end
 
     render json: entries
-      .includes(:task, :project, :charge_code, invoice_line_item: :invoice)
+      .includes(:task, :charge_code, :client, invoice_line_item: :invoice, project: :client)
       .order(date: :desc)
       .as_json(
         include: {
           task: { only: %i[id title] },
-          project: { only: %i[id name] },
+          project: { only: %i[id name client_id], include: { client: { only: %i[id name] } } },
           charge_code: { only: %i[id code description] },
+          client: { only: %i[id name] },
           invoice_line_item: { include: { invoice: { methods: :number } } }
         }
       )
