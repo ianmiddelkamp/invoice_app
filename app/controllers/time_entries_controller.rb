@@ -19,7 +19,7 @@ class TimeEntriesController < ApplicationController
   EXPORT_TIME_ZONE = "Eastern Time (US & Canada)"
 
   # GET /time_entries/export?format=csv|xlsx|md
-  # Exports the same filtered set as #index (client_id/project_id/status/hide_charge_codes),
+  # Exports the same filtered set as #index (client_id/project_id/status/charge_code_ids),
   # so the export always matches what's currently shown on the Timesheets page. Times are
   # converted explicitly to EXPORT_TIME_ZONE rather than relying on the app's global
   # config.time_zone, so the export doesn't silently drift if that default ever changes.
@@ -95,12 +95,17 @@ class TimeEntriesController < ApplicationController
 
   private
 
+  # `@project` gets set from `params[:project_id]` regardless of whether that came from the
+  # nested route path (/projects/:project_id/time_entries, used by TaskBoard — always wants the
+  # project's full history, no other filters) or as a plain query param on the flat route
+  # (/time_entries?project_id=X, used by the Timesheets page's project dropdown, which very much
+  # still wants status/charge_code_ids applied alongside it). Scoping to @project must not
+  # short-circuit the rest of these filters — only skip the client_id/project_id/charge_code_ids
+  # filters below that @project already makes redundant (a specific project has no charge codes).
   def filtered_entries
-    entries = if @project
-      @project.time_entries
-    else
-      scope = @current_user.time_entries
+    scope = @project ? @project.time_entries : @current_user.time_entries
 
+    unless @project
       if params[:client_id].present?
         scope = scope.left_outer_joins(:project).where(
           "(time_entries.project_id IS NOT NULL AND projects.client_id = :cid) OR " \
@@ -108,21 +113,19 @@ class TimeEntriesController < ApplicationController
           cid: params[:client_id]
         )
       end
-
       scope = scope.where(project_id: params[:project_id]) if params[:project_id].present?
-      scope = scope.where(project_id: nil) if params[:hide_charge_codes].blank? && params[:charge_code_id].present?
-      scope = scope.where.not(project_id: nil) if params[:hide_charge_codes] == "true"
-
-      if params[:status] == "unbilled"
-        scope = scope.where(invoice_id: nil)
-      elsif params[:status] == "billed"
-        scope = scope.where.not(invoice_id: nil)
+      if params[:charge_code_ids].present?
+        scope = scope.where(charge_code_id: params[:charge_code_ids].to_s.split(","))
       end
-
-      scope
     end
 
-    entries.includes(:task, :charge_code, :client, :invoice, project: :client).order(date: :desc)
+    if params[:status] == "unbilled"
+      scope = scope.where(invoice_id: nil)
+    elsif params[:status] == "billed"
+      scope = scope.where.not(invoice_id: nil)
+    end
+
+    scope.includes(:task, :charge_code, :client, :invoice, project: :client).order(date: :desc)
   end
 
   def set_project

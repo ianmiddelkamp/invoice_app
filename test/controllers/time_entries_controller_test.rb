@@ -81,4 +81,41 @@ class TimeEntriesControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "My Client"
     refute_includes response.body, "Their Client"
   end
+
+  test "index applies the unbilled status filter even when also filtering by project_id" do
+    # project_id lands in the same params key whether it came from the nested route
+    # (/projects/:project_id/time_entries) or, like here, as a flat-route query param — the
+    # status filter must still apply in the latter case, not be silently skipped.
+    unbilled = TimeEntry.create!(user: users(:admin), date: Date.current, hours: 1, project: @my_project)
+    invoice = Invoice.create!(
+      client: @my_project.client,
+      contact: @my_project.client.contacts.create!(name: "Contact", primary: true),
+      status: "pending"
+    )
+    billed = TimeEntry.create!(user: users(:admin), date: Date.current, hours: 1, project: @my_project, invoice: invoice)
+
+    get "/time_entries", params: { project_id: @my_project.id, status: "unbilled" }, headers: auth_headers(users(:admin))
+    assert_response :success
+
+    ids = JSON.parse(response.body).map { |e| e["id"] }
+    assert_includes ids, unbilled.id
+    assert_not_includes ids, billed.id
+  end
+
+  test "index applies the billed status filter even when also filtering by project_id" do
+    unbilled = TimeEntry.create!(user: users(:admin), date: Date.current, hours: 1, project: @my_project)
+    invoice = Invoice.create!(
+      client: @my_project.client,
+      contact: @my_project.client.contacts.create!(name: "Contact", primary: true),
+      status: "pending"
+    )
+    billed = TimeEntry.create!(user: users(:admin), date: Date.current, hours: 1, project: @my_project, invoice: invoice)
+
+    get "/time_entries", params: { project_id: @my_project.id, status: "billed" }, headers: auth_headers(users(:admin))
+    assert_response :success
+
+    ids = JSON.parse(response.body).map { |e| e["id"] }
+    assert_includes ids, billed.id
+    assert_not_includes ids, unbilled.id
+  end
 end
