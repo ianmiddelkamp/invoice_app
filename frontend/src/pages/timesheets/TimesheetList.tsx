@@ -1,7 +1,8 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { getClients } from '../../api/clients';
 import { getProjects } from '../../api/projects';
+import { getChargeCodes } from '../../api/chargeCodes';
 import { getAllTimeEntries, deleteTimeEntry, deleteChargeCodeTimeEntry } from '../../api/timeEntries';
 import PageHeader from '../../components/PageHeader';
 import ExportMenu from '../../components/ExportMenu';
@@ -10,23 +11,26 @@ import { timesheetsListHelp } from '../../content/helpCopy';
 import { formatDateTime, formatDate } from '../../utils/dates';
 import { downloadExport } from '../../utils/export';
 import { confirm } from '../../services/dialog';
-import type { Client, Project, TimeEntry } from '../../types';
+import type { Client, Project, ChargeCode, TimeEntry } from '../../types';
 
 export default function TimesheetList() {
   const navigate = useNavigate();
 
   const [clients, setClients] = useState<Client[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [chargeCodes, setChargeCodes] = useState<ChargeCode[]>([]);
   const [entries, setEntries] = useState<TimeEntry[]>([]);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [chargeCodeMenuOpen, setChargeCodeMenuOpen] = useState(false);
+  const chargeCodeMenuRef = useRef<HTMLDivElement>(null);
 
   const [filters, setFilters] = useState({
     clientId: '',
     projectId: '',
     status: 'all',
-    hideChargeCodes: false,
+    chargeCodeIds: new Set<number>(),
   });
 
   const [sort, setSort] = useState({ column: 'date', direction: 'desc' });
@@ -47,6 +51,17 @@ export default function TimesheetList() {
   useEffect(() => {
     getClients().then((data) => { if (data) setClients(data); }).catch(() => {});
     getProjects().then((data) => { if (data) setProjects(data); }).catch(() => {});
+    getChargeCodes().then((data) => { if (data) setChargeCodes(data); }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (chargeCodeMenuRef.current && !chargeCodeMenuRef.current.contains(e.target as Node)) {
+        setChargeCodeMenuOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const visibleProjects = filters.clientId
@@ -62,7 +77,9 @@ export default function TimesheetList() {
     if (filters.clientId) params.client_id = filters.clientId;
     if (filters.projectId) params.project_id = filters.projectId;
     if (filters.status !== 'all') params.status = filters.status;
-    if (filters.hideChargeCodes) params.hide_charge_codes = 'true';
+    if (!filters.projectId && filters.chargeCodeIds.size > 0) {
+      params.charge_code_ids = [...filters.chargeCodeIds].join(',');
+    }
 
     getAllTimeEntries(params)
       .then((data) => { if (data) setEntries(data); })
@@ -72,11 +89,20 @@ export default function TimesheetList() {
 
   useEffect(() => { loadEntries(); }, [loadEntries]);
 
-  function setFilter(key: string, value: string | boolean) {
+  function setFilter(key: string, value: string) {
     setFilters((prev) => {
       const next = { ...prev, [key]: value };
       if (key === 'clientId') next.projectId = '';
+      if (key === 'projectId' && value) next.chargeCodeIds = new Set();
       return next;
+    });
+  }
+
+  function toggleChargeCode(id: number) {
+    setFilters((prev) => {
+      const next = new Set(prev.chargeCodeIds);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return { ...prev, chargeCodeIds: next };
     });
   }
 
@@ -151,7 +177,9 @@ export default function TimesheetList() {
     if (filters.clientId) params.client_id = filters.clientId;
     if (filters.projectId) params.project_id = filters.projectId;
     if (filters.status !== 'all') params.status = filters.status;
-    if (filters.hideChargeCodes) params.hide_charge_codes = 'true';
+    if (!filters.projectId && filters.chargeCodeIds.size > 0) {
+      params.charge_code_ids = [...filters.chargeCodeIds].join(',');
+    }
     return new URLSearchParams(params).toString();
   }
   function runExport(format: string, extension: string) {
@@ -202,15 +230,48 @@ export default function TimesheetList() {
           <option value="billed">Invoiced</option>
         </select>
 
-        <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
-          <input
-            type="checkbox"
-            checked={filters.hideChargeCodes}
-            onChange={(e) => setFilter('hideChargeCodes', e.target.checked)}
-            className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-          />
-          Hide charge codes
-        </label>
+        {!filters.projectId && (
+          <div className="relative" ref={chargeCodeMenuRef}>
+            <button
+              type="button"
+              onClick={() => setChargeCodeMenuOpen((prev) => !prev)}
+              className="rounded-md border border-gray-300 bg-white shadow-sm sm:text-sm px-3 py-2 text-gray-700 hover:bg-gray-50"
+            >
+              Charge Codes{filters.chargeCodeIds.size > 0 ? ` (${filters.chargeCodeIds.size})` : ''}
+            </button>
+            {chargeCodeMenuOpen && (
+              <div className="absolute z-10 mt-1 w-64 max-h-72 overflow-y-auto rounded-md border border-gray-200 bg-white shadow-lg py-1">
+                {chargeCodes.length === 0 && (
+                  <p className="px-3 py-2 text-sm text-gray-400">No charge codes.</p>
+                )}
+                {chargeCodes.map((cc) => (
+                  <label
+                    key={cc.id}
+                    className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer select-none"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={filters.chargeCodeIds.has(cc.id)}
+                      onChange={() => toggleChargeCode(cc.id)}
+                      className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                    />
+                    <span className="font-mono text-xs bg-gray-100 px-1.5 py-0.5 rounded">{cc.code}</span>
+                    {cc.description && <span className="text-gray-500 truncate">{cc.description}</span>}
+                  </label>
+                ))}
+                {filters.chargeCodeIds.size > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setFilters((prev) => ({ ...prev, chargeCodeIds: new Set() }))}
+                    className="w-full text-left px-3 py-1.5 text-sm text-indigo-600 hover:bg-gray-50 border-t border-gray-100 mt-1"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         <ExportMenu options={exportOptions} />
 
