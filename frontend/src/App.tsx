@@ -15,6 +15,7 @@ import TimesheetList from './pages/timesheets/TimesheetList';
 import TimesheetForm from './pages/timesheets/TimesheetForm';
 import InvoiceList from './pages/invoices/InvoiceList';
 import InvoiceForm from './pages/invoices/InvoiceForm';
+import CustomInvoiceForm from './pages/invoices/CustomInvoiceForm';
 import InvoiceDetail from './pages/invoices/InvoiceDetail';
 import EstimateList from './pages/estimates/EstimateList';
 import EstimateForm from './pages/estimates/EstimateForm';
@@ -67,6 +68,7 @@ export default function App() {
 
           <Route path="invoices" element={<InvoiceList />} />
           <Route path="invoices/new" element={<InvoiceForm />} />
+          <Route path="invoices/custom/new" element={<CustomInvoiceForm />} />
           <Route path="invoices/:id" element={<InvoiceDetail />} />
 
           <Route path="estimates" element={<EstimateList />} />

@@ -11,6 +11,26 @@ class TimeEntry < ApplicationRecord
   validates :hours, presence: true, numericality: { greater_than: 0 }
   validate :project_or_charge_code_required
 
+  # Mirrors InvoiceGenerator's private build_description/effective_rate for a single entry —
+  # used by InvoiceLineItemsController when attaching exactly one time entry to a custom line
+  # converts it into a real "time" kind line backed by this entry.
+  def billing_description
+    if charge_code_id.present?
+      [charge_code.code, description.presence].compact.join(" · ")
+    else
+      [task&.task_group&.title.presence, task&.title.presence, description.presence].compact.join(" · ")
+    end
+  end
+
+  def effective_rate
+    client_rates = (project&.client || client)&.rates
+    if charge_code_id.present?
+      charge_code.rate || client_rates&.first&.rate || 0
+    else
+      project&.rates&.first&.rate || client_rates&.first&.rate || 0
+    end
+  end
+
   private
 
   def project_or_charge_code_required

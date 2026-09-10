@@ -437,6 +437,15 @@ export default function ProjectForm() {
         {isEdit && projectId && (
           <div ref={estimatesRef} className="w-full scroll-mt-8">
             <ProjectEstimates projectId={projectId} />
+            <div className="mt-4">
+              <button
+                type="button"
+                onClick={() => navigate(`/invoices/custom/new?project_id=${projectId}`)}
+                className="text-sm font-medium text-indigo-600 hover:text-indigo-800"
+              >
+                + Create Custom Invoice
+              </button>
+            </div>
           </div>
         )}
         {isEdit && projectId && (

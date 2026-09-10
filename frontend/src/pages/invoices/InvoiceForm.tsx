@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { getClients } from '../../api/clients';
+import { getProjects } from '../../api/projects';
 import { getUnbilledEntries, createInvoice } from '../../api/invoices';
 import PageHeader from '../../components/PageHeader';
 import { today, firstOfMonth, formatDate } from '../../utils/dates';
-import type { Client, TimeEntry } from '../../types';
+import type { Client, Project, TimeEntry } from '../../types';
 
 interface LocationState {
   entries: TimeEntry[];
@@ -22,6 +23,9 @@ export default function InvoiceForm() {
   const preloaded = location.state as LocationState | null;
 
   const [clients, setClients] = useState<Client[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [mode, setMode] = useState<'time' | 'custom'>('time');
+  const [customProjectId, setCustomProjectId] = useState('');
   const [form, setForm] = useState({
     client_id: preloaded?.clientId || '',
     start_date: firstOfMonth(),
@@ -46,11 +50,13 @@ export default function InvoiceForm() {
         if (!preloaded && cs.length > 0) setForm((prev) => ({ ...prev, client_id: String(cs[0].id) }));
       })
       .catch((e) => setError((e as Error).message));
+    getProjects().then((ps) => { if (ps) setProjects(ps); }).catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+    if (e.target.name === 'client_id') setCustomProjectId('');
   }
 
   async function handleLoadEntries(e: React.FormEvent) {
@@ -108,9 +114,15 @@ export default function InvoiceForm() {
     }
   }
 
+  function handleContinueCustom() {
+    if (!customProjectId) return;
+    navigate(`/invoices/custom/new?project_id=${customProjectId}`);
+  }
+
   const selectedClient = clients.find((c) => String(c.id) === form.client_id);
   const clientName = selectedClient?.name;
   const contacts = selectedClient?.contacts ?? [];
+  const clientProjects = projects.filter((p) => String(p.client_id) === form.client_id);
 
   useEffect(() => {
     const primary = contacts.find((c) => c.primary);
@@ -234,7 +246,24 @@ export default function InvoiceForm() {
         <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-md text-sm">{error}</div>
       )}
 
-      <form onSubmit={handleLoadEntries} className="bg-white rounded-lg shadow p-6 space-y-5">
+      <div className="bg-white rounded-lg shadow p-6 space-y-5">
+        <div className="flex rounded-md border border-gray-300 p-1 bg-gray-50">
+          <button
+            type="button"
+            onClick={() => setMode('time')}
+            className={`flex-1 px-3 py-1.5 text-sm font-medium rounded ${mode === 'time' ? 'bg-white shadow text-indigo-700' : 'text-gray-500 hover:text-gray-700'}`}
+          >
+            Bill from Time Entries
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode('custom')}
+            className={`flex-1 px-3 py-1.5 text-sm font-medium rounded ${mode === 'custom' ? 'bg-white shadow text-indigo-700' : 'text-gray-500 hover:text-gray-700'}`}
+          >
+            Custom Invoice
+          </button>
+        </div>
+
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Client *</label>
           <select
@@ -251,46 +280,85 @@ export default function InvoiceForm() {
           </select>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">From</label>
-            <input
-              type="date"
-              name="start_date"
-              value={form.start_date}
-              onChange={handleChange}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">To</label>
-            <input
-              type="date"
-              name="end_date"
-              value={form.end_date}
-              onChange={handleChange}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-            />
-          </div>
-        </div>
+        {mode === 'time' ? (
+          <form onSubmit={handleLoadEntries} className="space-y-5">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">From</label>
+                <input
+                  type="date"
+                  name="start_date"
+                  value={form.start_date}
+                  onChange={handleChange}
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">To</label>
+                <input
+                  type="date"
+                  name="end_date"
+                  value={form.end_date}
+                  onChange={handleChange}
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                />
+              </div>
+            </div>
 
-        <div className="flex items-center gap-3 pt-2">
-          <button
-            type="submit"
-            disabled={loading || !form.client_id}
-            className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700 disabled:opacity-50 transition-colors"
-          >
-            {loading ? 'Loading…' : 'Load Entries →'}
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate('/invoices')}
-            className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900"
-          >
-            Cancel
-          </button>
-        </div>
-      </form>
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                type="submit"
+                disabled={loading || !form.client_id}
+                className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+              >
+                {loading ? 'Loading…' : 'Load Entries →'}
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/invoices')}
+                className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        ) : (
+          <div className="space-y-5">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Project *</label>
+              <select
+                value={customProjectId}
+                onChange={(e) => setCustomProjectId(e.target.value)}
+                disabled={!form.client_id}
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:bg-gray-50"
+              >
+                <option value="">{form.client_id ? 'Select a project…' : 'Select a client first'}</option>
+                {clientProjects.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={handleContinueCustom}
+                disabled={!customProjectId}
+                className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+              >
+                Continue →
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/invoices')}
+                className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

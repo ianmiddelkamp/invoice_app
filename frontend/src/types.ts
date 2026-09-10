@@ -78,11 +78,12 @@ export interface ChargeCode {
 export interface InvoiceLineItemDetail {
   id: number;
   description: string | null;
-  hours: number;
-  rate: number;
-  amount: number;
+  hours: number | null;
+  rate: number | null;
+  amount: number | null; // null only for a "custom" text-only row (e.g. a section label)
   tax_rate: string | null;
-  kind: string; // "time" | "fixed" | "adjustment"
+  kind: string; // "time" | "fixed" | "adjustment" | "custom"
+  position: number | null;
   project?: Pick<Project, 'id' | 'name' | 'show_task_breakdown' | 'show_hours'> | null;
   task?: Pick<Task, 'id' | 'title'> & { task_group?: Pick<TaskGroup, 'id' | 'title' | 'position'> };
   time_entry?: {
@@ -137,7 +138,7 @@ export interface TimeEntry {
   charge_code_id: number | null;
   client_id: number | null;
   project?: Project & { client?: Client };
-  task?: Pick<Task, 'id' | 'title'>;
+  task?: Pick<Task, 'id' | 'title'> & { task_group?: Pick<TaskGroup, 'id' | 'title'> };
   charge_code?: ChargeCode;
   client?: Client;
   invoice?: Pick<Invoice, 'id' | 'number'>;

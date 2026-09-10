@@ -47,6 +47,7 @@ Rails.application.routes.draw do
   end
 
   resources :invoices, except: [:new, :edit] do
+    resources :line_items, only: %i[create update destroy], controller: "invoice_line_items"
     collection do
       get :unbilled_entries
       get :export
@@ -57,6 +58,9 @@ Rails.application.routes.draw do
       post :send_invoice
       post :mark_as_paid
       post :send_receipt
+      get  :time_entries
+      post :attach_time_entries
+      post :detach_time_entries
     end
   end
 

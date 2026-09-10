@@ -73,4 +73,18 @@ class Project < ApplicationRecord
 
     { reference: reference.number, added: added, removed: removed, changed: changed }
   end
+
+  # Fixed Price's total lands on billing_amount by construction when billed through the
+  # generator (see fixed_price_quote_drift above) — but the custom invoice creator lets someone
+  # hand-build multiple invoices for the same project (e.g. splitting a fixed price into two
+  # milestone payments), and nothing stops those from summing to more than what was agreed.
+  # Surfaced as a non-blocking warning, same philosophy as fixed_price_quote_drift — never
+  # blocks saving, just flags it.
+  def fixed_price_overage_warning
+    return nil unless fixed_price?
+    billed = InvoiceLineItem.where(project: self).sum(:amount)
+    return nil if billed <= billing_amount
+    "#{name}'s invoices now total $#{billed} against its $#{billing_amount} fixed price " \
+      "($#{billed - billing_amount} over)."
+  end
 end

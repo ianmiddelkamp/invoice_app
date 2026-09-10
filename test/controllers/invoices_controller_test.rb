@@ -199,4 +199,80 @@ class InvoicesControllerTest < ActionDispatch::IntegrationTest
     ids = JSON.parse(response.body).map { |e| e["id"] }
     assert_not_includes ids, entry.id
   end
+
+  test "create with custom: true builds a blank invoice with no line items" do
+    post "/invoices", params: { client_id: @client.id, custom: true }, headers: auth_headers(users(:admin))
+
+    assert_response :created
+    body = JSON.parse(response.body)
+    assert_equal [], body["invoice_line_items"]
+    assert_nil body["total"]
+  end
+
+  test "attach_time_entries marks entries billed against the invoice" do
+    invoice = Invoice.create!(client: @client, contact: @primary, status: "pending")
+    entry = @project.time_entries.create!(user: users(:admin), date: Date.current, hours: 3)
+
+    post "/invoices/#{invoice.id}/attach_time_entries",
+      params: { time_entry_ids: [entry.id] }.to_json,
+      headers: auth_headers(users(:admin)).merge("Content-Type" => "application/json")
+
+    assert_response :success
+    assert_equal invoice.id, entry.reload.invoice_id
+  end
+
+  test "attach_time_entries with a single entry and line_item_id converts the line to a real time-kind line" do
+    invoice = Invoice.create!(client: @client, contact: @primary, status: "pending")
+    line_item = invoice.invoice_line_items.create!(kind: "custom", description: "")
+    entry = @project.time_entries.create!(user: users(:admin), date: Date.current, hours: 3)
+
+    post "/invoices/#{invoice.id}/attach_time_entries",
+      params: { time_entry_ids: [entry.id], line_item_id: line_item.id }.to_json,
+      headers: auth_headers(users(:admin)).merge("Content-Type" => "application/json")
+
+    assert_response :success
+    line_item.reload
+    assert_equal "time", line_item.kind
+    assert_equal entry, line_item.time_entry
+    assert_equal entry.billing_description, line_item.description
+  end
+
+  test "attach_time_entries preserves a description already on the line instead of overwriting it" do
+    invoice = Invoice.create!(client: @client, contact: @primary, status: "pending")
+    line_item = invoice.invoice_line_items.create!(kind: "custom", description: "My custom label")
+    entry = @project.time_entries.create!(user: users(:admin), date: Date.current, hours: 3)
+
+    post "/invoices/#{invoice.id}/attach_time_entries",
+      params: { time_entry_ids: [entry.id], line_item_id: line_item.id }.to_json,
+      headers: auth_headers(users(:admin)).merge("Content-Type" => "application/json")
+
+    assert_response :success
+    assert_equal "My custom label", line_item.reload.description
+  end
+
+  test "attach_time_entries rejects an already-billed entry" do
+    invoice = Invoice.create!(client: @client, contact: @primary, status: "pending")
+    entry = @project.time_entries.create!(user: users(:admin), date: Date.current, hours: 3, invoice: invoice)
+
+    other_invoice = Invoice.create!(client: @client, contact: @primary, status: "pending")
+    post "/invoices/#{other_invoice.id}/attach_time_entries",
+      params: { time_entry_ids: [entry.id] }.to_json,
+      headers: auth_headers(users(:admin)).merge("Content-Type" => "application/json")
+
+    assert_response :unprocessable_entity
+  end
+
+  test "attach_time_entries rejects an entry belonging to a different client" do
+    invoice = Invoice.create!(client: @client, contact: @primary, status: "pending")
+    other_client = @bp.clients.create!(name: "Other Client")
+    other_project = other_client.projects.create!(name: "Other Project")
+    other_entry = other_project.time_entries.create!(user: users(:admin), date: Date.current, hours: 1)
+
+    post "/invoices/#{invoice.id}/attach_time_entries",
+      params: { time_entry_ids: [other_entry.id] }.to_json,
+      headers: auth_headers(users(:admin)).merge("Content-Type" => "application/json")
+
+    assert_response :unprocessable_entity
+    assert_nil other_entry.reload.invoice_id
+  end
 end

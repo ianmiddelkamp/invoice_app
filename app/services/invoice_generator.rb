@@ -57,18 +57,14 @@ class InvoiceGenerator
         end
       end
 
-      items = invoice.invoice_line_items.reload
-
       # A `return` here would silently commit the surrounding transaction (Rails treats a
       # non-local return from inside a transaction block as normal completion, not a rollback) —
       # raising ActiveRecord::Rollback is the only way to bail out and have `transaction` itself
       # yield nil for an invoice that ended up with no billable lines (e.g. every group was an
       # already-billed fixed-price project skipping a no-op re-generation).
-      raise ActiveRecord::Rollback if items.empty?
+      raise ActiveRecord::Rollback if invoice.invoice_line_items.empty?
 
-      subtotal = items.sum(:amount)
-      tax      = items.sum { |i| i.amount * i.tax_rate / 100 }
-      invoice.update!(total: subtotal + tax)
+      invoice.recalculate_total!
       invoice
     end
   end

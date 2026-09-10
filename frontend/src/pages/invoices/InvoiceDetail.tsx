@@ -11,6 +11,7 @@ import ContactPickerDialog from '../../components/ContactPickerDialog';
 import ActionsMenu, { type ActionMenuItem } from '../../components/ActionsMenu';
 import ScaleToFit from '../../components/ScaleToFit';
 import HelpButton from '../../components/HelpButton';
+import InvoiceHeader from '../../components/InvoiceHeader';
 import { invoiceContactsHelp } from '../../content/helpCopy';
 import { visibleInvoiceRows } from '../../utils/invoiceLineItems';
 
@@ -165,9 +166,6 @@ export default function InvoiceDetail() {
   const contacts = invoice.client?.contacts ?? [];
   const brand = business?.primary_color || '#4338ca';
 
-  const bizAddress = [business?.address1, business?.city, business?.state, business?.postcode].filter(Boolean).join(', ');
-  const clientAddress = [invoice.client?.address1, invoice.client?.city, invoice.client?.state, invoice.client?.postcode].filter(Boolean).join(', ');
-
   const periodSubtitle = invoice.start_date && invoice.end_date
     ? `Period: ${formatDate(invoice.start_date)} – ${formatDate(invoice.end_date)}`
     : null;
@@ -273,75 +271,20 @@ export default function InvoiceDetail() {
             PAID
           </div>
         )}
-        <div className="flex justify-between items-start">
-          <div>
-            {business?.logo_data_uri ? (
-              <img src={business.logo_data_uri} alt={business.name} className="max-h-20 max-w-40 object-contain" />
-            ) : (
-              <div style={{ color: brand }} className="text-4xl font-bold tracking-tight leading-none">INVOICE</div>
-            )}
-          </div>
-          <div className="text-right">
-            {business?.logo_data_uri && (
-              <div style={{ color: brand }} className="text-2xl font-bold tracking-tight leading-none">INVOICE</div>
-            )}
-            <div className="text-sm font-semibold text-gray-900 mt-1">{invoice.number}</div>
-            <div className="text-xs text-gray-500 mt-1">Date: {formatDate(invoice.created_at)}</div>
-            {periodSubtitle && <div className="text-xs text-gray-500 mt-0.5">{periodSubtitle}</div>}
-          </div>
-        </div>
-
-        <div style={{ borderTop: `2px solid ${brand}`, margin: '16px 0' }} />
-
-        <div className="grid grid-cols-2 gap-8 mb-6">
-          <div>
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">From</p>
-            <p className="text-sm font-semibold text-gray-900">{business?.name || 'Your Business'}</p>
-            <div className="text-xs text-gray-500 leading-relaxed mt-1">
-              {bizAddress && <div>{bizAddress}</div>}
-              {business?.email && <div>{business.email}</div>}
-              {business?.phone && <div>{business.phone}</div>}
-              {business?.hst_number && <div>HST # {business.hst_number}</div>}
-            </div>
-          </div>
-          <div>
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Bill To</p>
-            <p className="text-sm font-semibold text-gray-900">{invoice.client?.name}</p>
-            <div className="text-xs text-gray-500 leading-relaxed mt-1">
-              {editingContact ? (
-                <select
-                  autoFocus
-                  defaultValue={invoice.contact?.id}
-                  disabled={savingContact}
-                  onChange={(e) => handleContactChange(e.target.value)}
-                  onBlur={() => setEditingContact(false)}
-                  className="text-xs border-b border-indigo-400 outline-none bg-transparent text-gray-700"
-                >
-                  {contacts.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
-              ) : (
-                invoice.contact?.name && (
-                  <div className="flex items-center gap-1.5">
-                    <span>{invoice.contact.name}</span>
-                    <button
-                      type="button"
-                      onClick={() => setEditingContact(true)}
-                      title="Change who this invoice is billed to"
-                      className="text-indigo-600 hover:text-indigo-800 font-medium underline underline-offset-2"
-                    >
-                      Edit
-                    </button>
-                  </div>
-                )
-              )}
-              {invoice.contact?.email && <div>{invoice.contact.email}</div>}
-              {invoice.contact?.phone && <div>{invoice.contact.phone}</div>}
-              {clientAddress && <div>{clientAddress}</div>}
-            </div>
-          </div>
-        </div>
+        <InvoiceHeader
+          business={business}
+          client={invoice.client}
+          contact={invoice.contact}
+          number={invoice.number}
+          createdAt={invoice.created_at!}
+          periodSubtitle={periodSubtitle}
+          contacts={contacts}
+          editingContact={editingContact}
+          savingContact={savingContact}
+          onStartEditContact={() => setEditingContact(true)}
+          onContactChange={handleContactChange}
+          onCancelEditContact={() => setEditingContact(false)}
+        />
 
         <table className="w-full border-collapse">
           <thead>
@@ -359,20 +302,33 @@ export default function InvoiceDetail() {
           <tbody>
             {invoiceRows.rows.map((row, i) => (
               <tr key={row.id} style={i % 2 === 1 ? { backgroundColor: '#f9fafb' } : {}}>
-                <td className="px-3 py-2 text-sm text-gray-600 border-b border-gray-200">
-                  {row.date ? formatDate(row.date) : '—'}
-                </td>
-                <td className="px-3 py-2 text-sm text-gray-600 border-b border-gray-200">{row.projectName}</td>
-                <td className="px-3 py-2 text-sm text-gray-600 border-b border-gray-200">{row.description}</td>
-                {invoiceRows.showHours && <>
-                  <td className="px-3 py-2 text-sm text-gray-900 text-right border-b border-gray-200">
-                    {row.hours != null ? row.hours.toFixed(2) : '—'}
+                {row.isTextOnly ? (
+                  <td
+                    colSpan={invoiceRows.showHours ? 6 : 4}
+                    className="px-3 py-2 text-sm font-semibold text-gray-900 border-b border-gray-200"
+                  >
+                    {row.description}
                   </td>
-                  <td className="px-3 py-2 text-sm text-gray-900 text-right border-b border-gray-200">
-                    {row.rate != null ? `$${row.rate.toFixed(2)}` : '—'}
-                  </td>
-                </>}
-                <td className="px-3 py-2 text-sm font-medium text-gray-900 text-right border-b border-gray-200">${row.amount.toFixed(2)}</td>
+                ) : (
+                  <>
+                    <td className="px-3 py-2 text-sm text-gray-600 border-b border-gray-200">
+                      {row.date ? formatDate(row.date) : '—'}
+                    </td>
+                    <td className="px-3 py-2 text-sm text-gray-600 border-b border-gray-200">{row.projectName}</td>
+                    <td className="px-3 py-2 text-sm text-gray-600 border-b border-gray-200">{row.description}</td>
+                    {invoiceRows.showHours && <>
+                      <td className="px-3 py-2 text-sm text-gray-900 text-right border-b border-gray-200">
+                        {row.hours != null ? row.hours.toFixed(2) : '—'}
+                      </td>
+                      <td className="px-3 py-2 text-sm text-gray-900 text-right border-b border-gray-200">
+                        {row.rate != null ? `$${row.rate.toFixed(2)}` : '—'}
+                      </td>
+                    </>}
+                    <td className="px-3 py-2 text-sm font-medium text-gray-900 text-right border-b border-gray-200">
+                      ${(row.amount ?? 0).toFixed(2)}
+                    </td>
+                  </>
+                )}
               </tr>
             ))}
           </tbody>
@@ -380,8 +336,10 @@ export default function InvoiceDetail() {
 
         {(() => {
           const items = invoice.invoice_line_items || [];
-          const subtotal = items.reduce((s, i) => s + i.amount, 0);
-          const taxAmount = items.reduce((s, i) => s + i.amount * parseFloat(i.tax_rate || '0') / 100, 0);
+          // A text-only custom line has amount: null (nothing to bill) — guard against it, same
+          // as Invoice#recalculate_total! does on the backend.
+          const subtotal = items.reduce((s, i) => s + (i.amount ?? 0), 0);
+          const taxAmount = items.reduce((s, i) => s + (i.amount ?? 0) * parseFloat(i.tax_rate || '0') / 100, 0);
           const taxRate = items.find((i) => parseFloat(i.tax_rate || '0') > 0)?.tax_rate;
           return (
             <div className="mt-auto flex justify-end pt-4">
