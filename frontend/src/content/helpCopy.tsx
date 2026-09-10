@@ -144,6 +144,40 @@ export const projectBillingHelp = {
   ),
 };
 
+export const customInvoiceHelp = {
+  title: 'Custom Invoices',
+  content: (
+    <>
+      <p>
+        A custom invoice is built entirely by hand — there's no generator run, no time entries
+        required to start. Useful for anything the normal "bill unbilled hours" flow doesn't
+        fit, most commonly <strong>splitting a Fixed Price project into milestone
+        payments</strong> (e.g. half up front, half on completion) across two or more separate
+        invoices, since a Fixed Price project is otherwise billed in one shot, exactly once.
+      </p>
+      <p>
+        Each row's fields are all optional — leave <strong>Amount</strong> blank and the row
+        becomes a plain text line (e.g. a section label like "Phase 1: Design") with nothing
+        billed on it. Fill in an amount and it's a real billable line; Hours/Rate are
+        independent of Amount and never required — a milestone payment doesn't have to be
+        hours × rate.
+      </p>
+      <p>
+        <strong>Attach time</strong> lets you check off this project's unbilled time entries to
+        calculate a row's Hours — their hours are summed in as a starting point (still editable
+        afterward), and those entries are marked billed against this invoice so they won't show
+        up as unbilled again. This is a one-time calculation, not a lasting link — nothing
+        tracks which entries fed a given row's hours after the fact.
+      </p>
+      <p>
+        If a Fixed Price project's custom invoices end up totaling more than its agreed price,
+        you'll see a warning after saving — it's informational only and never blocks saving, so
+        you stay in control of exactly how the total gets split.
+      </p>
+    </>
+  ),
+};
+
 export const disbursementsHelp = {
   title: 'How Disbursements Work',
   content: (

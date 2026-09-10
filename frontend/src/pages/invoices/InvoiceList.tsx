@@ -74,6 +74,8 @@ export default function InvoiceList() {
 
   return (
     <div className="p-4 sm:p-8">
+      {/* /invoices/new offers both "bill from time entries" and "custom invoice" as a mode
+          toggle, so this page only ever needs the one action. */}
       <PageHeader title="Invoices" actionLabel="+ New Invoice" actionTo="/invoices/new" />
 
       <div className="mb-5 flex flex-wrap items-center gap-3">

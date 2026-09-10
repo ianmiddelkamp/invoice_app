@@ -134,13 +134,23 @@
             <% end %>
             <td class="right">$<%= "%.2f" % (item.respond_to?(:display_amount) ? item.display_amount : item.amount) %></td>
           </tr>
+        <% elsif item.kind == "custom" && item.amount.nil? %>
+          <%# A text-only custom line (e.g. a section label) — no date/hours/rate/amount, just
+              its description, spanning the full row. %>
+          <tr>
+            <td colspan="<%= show_hours ? 6 : 4 %>"><strong><%= item.description %></strong></td>
+          </tr>
         <% else %>
           <tr>
             <td><%= item.time_entry&.date&.strftime("%d %b %Y") || "—" %></td>
             <td><%= item.project&.name || item.time_entry&.charge_code&.code || "—" %></td>
             <td><%= item.description.presence || "—" %></td>
+            <% # "time" always has real hours; a custom line only has real hours when the
+               # hours field was actually filled in (e.g. calculated from attached time
+               # entries) — fixed/adjustment lines' hours are a meaningless stored 0. %>
+            <% show_real_hours = item.kind == "time" || (item.kind == "custom" && item.hours.present?) %>
             <% if show_hours %>
-              <td class="right"><%= item.kind == "time" ? "%.2f" % item.hours : "&mdash;".html_safe %></td>
+              <td class="right"><%= show_real_hours ? "%.2f" % item.hours : "&mdash;".html_safe %></td>
               <td class="right"><%= item.rate.present? ? "$#{"%.2f" % item.rate}" : "&mdash;".html_safe %></td>
             <% end %>
             <td class="right">$<%= "%.2f" % item.amount %></td>

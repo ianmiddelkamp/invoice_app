@@ -18,6 +18,18 @@ class Invoice < ApplicationRecord
     (total || 0) - (amount_paid || 0)
   end
 
+  # Single source of truth for totaling an invoice's line items — was duplicated inline in
+  # InvoiceGenerator#generate!; now also called by InvoiceLineItemsController after every
+  # custom-invoice line item mutation.
+  def recalculate_total!
+    items    = invoice_line_items.reload
+    subtotal = items.sum(:amount)
+    # Ruby-side sum, not SQL — a text-only custom line has amount: nil, which SQL SUM(:amount)
+    # silently ignores but `nil * tax_rate` would raise here, so it needs an explicit fallback.
+    tax      = items.sum { |i| (i.amount || 0) * i.tax_rate / 100 }
+    update!(total: subtotal + tax)
+  end
+
   private
 
   # Self-healing: never trust the stored counter alone, always also check the highest

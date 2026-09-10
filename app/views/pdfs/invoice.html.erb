@@ -10,8 +10,10 @@
 
 <%= render "pdfs/line_items_table", items: @items, document_type: :invoice, project: nil %>
 
-<% subtotal   = @items.sum(&:amount)
-   tax_amount = @items.sum { |i| i.amount * i.tax_rate / 100 }
+<% # A text-only custom line has amount: nil (nothing to bill) — guard against it here same as
+   # Invoice#recalculate_total! does, since a plain `nil + number` would raise.
+   subtotal   = @items.sum { |i| i.amount || 0 }
+   tax_amount = @items.sum { |i| (i.amount || 0) * i.tax_rate / 100 }
    tax_rate   = @items.map(&:tax_rate).find { |r| r > 0 } %>
 <div class="total-section">
   <div style="min-width:320px;">

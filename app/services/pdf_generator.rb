@@ -6,11 +6,15 @@ class PdfGenerator
     @client   = invoice.client
     @contact  = invoice.contact
     @business = @client.business_profile
-    # Ordered by id (insertion order), not time_entry.date — fixed/adjustment lines have no
-    # time_entry to sort by, and InvoiceGenerator already creates rows in the desired order.
+    # Ordered by position (custom invoices), falling back to id for generator-created lines
+    # (position always nil there) — not time_entry.date, since fixed/adjustment/custom lines
+    # have no time_entry to sort by. This explicit .order is scoped to this one query only,
+    # deliberately not a default scope on the association — a default order there breaks
+    # unrelated aggregate queries elsewhere (.distinct.pluck, .group.count) that go through the
+    # same association.
     @items    = invoice.invoice_line_items
                        .includes(time_entry: [:project, :charge_code, :task], project: [], task: :task_group)
-                       .order(:id)
+                       .order(Arel.sql("position IS NULL, position, id"))
   end
 
   def generate

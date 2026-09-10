@@ -14,7 +14,8 @@ export interface InvoiceDisplayRow {
   description: string;
   hours: number | null; // null renders as an em-dash — non-"time" kind lines have no real hours
   rate: number | null;
-  amount: number;
+  amount: number | null; // null only for a text-only row
+  isTextOnly: boolean; // a custom line with no amount at all — renders as a plain spanning row
 }
 
 function effectiveTask(item: InvoiceLineItemDetail) {
@@ -26,14 +27,19 @@ function isChargeCode(item: InvoiceLineItemDetail): boolean {
 }
 
 function toRow(item: InvoiceLineItemDetail): InvoiceDisplayRow {
+  // "time" always has real hours; a custom line only has real hours when it was actually filled
+  // in (e.g. calculated from attached time entries) — fixed/adjustment lines' hours are a
+  // meaningless stored 0.
+  const showRealHours = item.kind === 'time' || (item.kind === 'custom' && item.hours != null);
   return {
     id: String(item.id),
     date: item.time_entry?.date ?? null,
     projectName: item.time_entry?.project?.name || item.project?.name || item.time_entry?.charge_code?.code || '—',
     description: item.description || '—',
-    hours: item.kind === 'time' ? item.hours : null,
+    hours: showRealHours ? item.hours : null,
     rate: item.kind === 'time' ? item.rate : null,
     amount: item.amount,
+    isTextOnly: item.kind === 'custom' && item.amount == null,
   };
 }
 
@@ -57,17 +63,27 @@ function consolidateByTaskGroup(timeItems: InvoiceLineItemDetail[], projectName:
       date: null,
       projectName,
       description: group.title,
-      hours: group.items.reduce((sum, i) => sum + i.hours, 0),
+      hours: group.items.reduce((sum, i) => sum + (i.hours ?? 0), 0),
       rate: null,
-      amount: group.items.reduce((sum, i) => sum + i.amount, 0),
+      amount: group.items.reduce((sum, i) => sum + (i.amount ?? 0), 0),
+      isTextOnly: false,
     }));
 
   return [...groupRows, ...ungroupable.map(toRow)];
 }
 
 export function visibleInvoiceRows(items: InvoiceLineItemDetail[]): { rows: InvoiceDisplayRow[]; showHours: boolean } {
+  // Generator-created lines all have position: null and keep their existing id order (stable,
+  // matches today's behavior); a custom invoice's explicitly-positioned lines sort by that
+  // position instead. Mirrors the ORDER BY in PdfGenerator/_line_items_table.html.erb.
+  const sortedItems = [...items].sort((a, b) => {
+    const aPos = a.position ?? Infinity;
+    const bPos = b.position ?? Infinity;
+    return aPos !== bPos ? aPos - bPos : a.id - b.id;
+  });
+
   const projectGroups = new Map<number | null, { project: LineItemProject | null; items: InvoiceLineItemDetail[] }>();
-  for (const item of items) {
+  for (const item of sortedItems) {
     const key = item.project?.id ?? null;
     if (!projectGroups.has(key)) projectGroups.set(key, { project: item.project ?? null, items: [] });
     projectGroups.get(key)!.items.push(item);
